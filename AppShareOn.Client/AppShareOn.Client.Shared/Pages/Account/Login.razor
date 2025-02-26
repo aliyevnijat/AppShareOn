@@ -1,0 +1,148 @@
+@page "/account/login"
+@using System.ComponentModel.DataAnnotations
+@using AppShareOn.Application.Models.Account
+@using AppShareOn.Application.Models
+@using AppShareOn.Application.Dtos
+@using AppShareOn.Client.Shared.Services
+@layout AccountLayout
+@inject NavigationManager Navigation
+@inject HttpClient Http
+@inject ICustomAuthenticationStateProvider AuthenticationStateProvider
+
+<!-- Left Column: Registration Prompt (green gradient background, no padding) -->
+<div class="col-lg-6 custom-green-gradient d-flex justify-content-center align-items-center rounded-start">
+    <div class="text-center py-5">
+        <h2>Don't have an account?</h2>
+        <p>Join us today and get started!</p>
+        <a class="btn btn-outline-light" href="/Account/Register">Register</a>
+    </div>
+</div>
+
+<!-- Right Column: Login Section (with padding) -->
+<div class="col-lg-6 d-flex justify-content-center align-items-center rounded-end">
+    <div class="w-75 py-5">
+        <h3 class="text-center mb-4">Sign In</h3>
+
+        <!-- Social Media Login Options (Icons Only) -->
+        <div class="text-center mb-4">
+            <div class="d-flex justify-content-center gap-4">
+                <!-- Social Media Buttons with Circular Icons -->
+                <button class="btn btn-outline-success rounded-circle" style="width: 50px; height: 50px;">
+                    <i class="bi bi-facebook"></i>
+                </button>
+                <button class="btn btn-outline-success rounded-circle" style="width: 50px; height: 50px;">
+                    <i class="bi bi-twitter-x"></i>
+                </button>
+                <button class="btn btn-outline-success rounded-circle" style="width: 50px; height: 50px;">
+                    <i class="bi bi-google"></i>
+                </button>
+                <button class="btn btn-outline-success rounded-circle" style="width: 50px; height: 50px;">
+                    <i class="bi bi-linkedin"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- OR Divider -->
+        <div class="text-center mb-3">
+            <span>or login with your email</span>
+        </div>
+
+        @if (!string.IsNullOrEmpty(result))
+        {
+            <div class="alert @alertClass">
+                @result
+            </div>
+        }
+
+        <!-- Manual Login Form -->
+        <div>
+            <EditForm Model="@loginModel" OnValidSubmit="HandleLoginAsync">
+                <DataAnnotationsValidator />
+
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email address</label>
+                    <InputText id="email" class="form-control" @bind-Value="loginModel.Email" />
+                    <ValidationMessage class="text-danger" For="@(() => loginModel.Email)" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <InputText id="password" type="password" class="form-control" @bind-Value="loginModel.Password" />
+                    <ValidationMessage class="text-danger" For="@(() => loginModel.Password)" />
+                </div>
+
+                <!-- Remember Me Checkbox -->
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="rememberMe" @bind="loginModel.RememberMe" />
+                    <label class="form-check-label" for="rememberMe">Remember Me</label>
+                </div>
+
+                <div class="mb-3 text-end">
+                    <a href="/Account/Forgot-Password">Forgot Password?</a>
+                </div>
+
+                <button type="submit" class="btn btn-success w-100">Login</button>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    // Login Model
+    private LoginModel loginModel = new LoginModel();
+
+    // API result properties.
+    private string result = string.Empty;
+    private string alertClass = string.Empty;
+
+    // Log out existing user if navigated to Login page.
+    protected override async Task OnInitializedAsync()
+    {
+        if (RendererInfo.IsInteractive)
+        {
+            await AuthenticationStateProvider.MarkNotAuthenticatedAsync();
+        }
+    }
+
+    // Handle form submission
+    private async Task HandleLoginAsync()
+    {
+        try
+        {
+            var response = await Http.PostAsJsonAsync<LoginModel>("/api/auth/login", loginModel);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadFromJsonAsync<ApiResponse<AuthTokenDto>>();
+
+                if (responseContent != null && responseContent.Data != null)
+                {
+                    await AuthenticationStateProvider.MarkAuthenticatedAsync(responseContent.Data.Token, loginModel.RememberMe);
+                    Navigation.NavigateTo($"/app", true);
+                }
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadFromJsonAsync<ApiResponse<object>>();
+
+                if (errorContent != null && errorContent.Errors.Count() > 0)
+                {
+                    result = errorContent.Errors.FirstOrDefault() ?? string.Empty;
+                    alertClass = "alert-danger";
+                }
+            }
+        }
+        catch (HttpRequestException e)
+        {
+            alertClass = "alert-danger";
+            result = $"An unexpected error occured: {e.Message}";
+            Console.WriteLine(e.Message);
+        }
+    }
+
+    // Simulated social login methods
+    private void LoginWithFacebook() { Console.WriteLine("Login with Facebook"); }
+    private void LoginWithTwitter() { Console.WriteLine("Login with Twitter"); }
+    private void LoginWithGoogle() { Console.WriteLine("Login with Google"); }
+    private void LoginWithLinkedIn() { Console.WriteLine("Login with LinkedIn"); }
+}

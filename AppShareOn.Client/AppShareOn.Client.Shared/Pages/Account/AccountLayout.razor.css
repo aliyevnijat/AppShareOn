@@ -1,0 +1,13 @@
+.container-fluid {
+    background: url('https://wallpapers.com/images/hd/abstract-white-geometric-background-2loh0g1tyxca8rju.jpg');
+}
+
+/* Custom gradient green background for the left column */
+::deep .custom-green-gradient {
+    /* Darker green to lighter green */
+    background: linear-gradient(135deg, rgba(125, 192, 155, 0.2), rgba(10, 121, 67, 0.8));
+}
+
+.col {
+    border: 1px solid #000;
+}

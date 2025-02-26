@@ -1,0 +1,61 @@
+@page "/account/{userId}/confirm"
+@using AppShareOn.Application.Dtos
+@using AppShareOn.Application.Models
+@using AppShareOn.Client.Shared.Layout
+@using System.ComponentModel.DataAnnotations
+@layout EmptyLayout
+@inject HttpClient Http
+
+@if (displayErrorMessage)
+{
+    <div class="text-center py-5">
+    <h2>Oh nooo...</h2>
+    <i class="bi bi-wrench-adjustable-circle-fill h1"></i>
+    <div class="text-center py-5">@errorMessage</div>
+</div>
+}
+else
+{
+    <div class="text-center py-5">
+    <h2>You're almost done!</h2>
+    <i class="bi bi-envelope-at h1"></i>
+    <p>Confirmation email has been sent to @userEmail. Click the link inside to verify your account and
+        get started.</p>
+    <p>Didnt get the email? <a href="#" class="text-secondary">[Resend confirmation link]</a></p>
+</div>
+}
+
+@code {
+    [Parameter]
+    public string UserId { get; set; } = string.Empty;
+
+    // UI fields
+    private string userEmail = string.Empty;
+    private bool displayErrorMessage = false;
+    private string errorMessage = "Something went wrong. Please try registering again or contact support.";
+
+    // Handle form submission
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var response = await Http.GetAsync($"/api/auth/users/{UserId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<ApiResponse<UserDto>>();
+
+                if (data != null && data.Data != null)
+                    userEmail = data.Data.Email;
+            }
+            else
+                displayErrorMessage = true;
+        }
+        catch (HttpRequestException e)
+        {
+            displayErrorMessage = true;
+            errorMessage = e.Message;
+            Console.WriteLine(e.Message);
+        }
+    }
+}

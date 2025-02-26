@@ -1,0 +1,190 @@
+@page "/account/register"
+@using AppShareOn.Application.Dtos
+@using AppShareOn.Application.Models
+@using AppShareOn.Application.Models.Account
+@using System.ComponentModel.DataAnnotations
+@using System.Web
+@layout AccountLayout
+@inject NavigationManager Navigation
+@inject HttpClient Http
+
+<!-- Left Column: Registration Section -->
+<div class="col-lg-6 d-flex justify-content-center align-items-center rounded-end">
+    <div class="w-75 py-5">
+        <h3 class="text-center mb-4">Create Account</h3>
+
+        <!-- Social Media Register Options (Icons Only) -->
+        <div class="text-center mb-4">
+            <div class="d-flex justify-content-center gap-4">
+                <!-- Social Media Buttons with Circular Icons -->
+                <button class="btn btn-outline-success rounded-circle" style="width: 50px; height: 50px;">
+                    <i class="bi bi-facebook"></i>
+                </button>
+                <button class="btn btn-outline-success rounded-circle" style="width: 50px; height: 50px;">
+                    <i class="bi bi-twitter-x"></i>
+                </button>
+                <button class="btn btn-outline-success rounded-circle" style="width: 50px; height: 50px;">
+                    <i class="bi bi-google"></i>
+                </button>
+                <button class="btn btn-outline-success rounded-circle" style="width: 50px; height: 50px;">
+                    <i class="bi bi-linkedin"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- OR Divider -->
+        <div class="text-center mb-3">
+            <span>or register with your email</span>
+        </div>
+
+        @if (!string.IsNullOrEmpty(result))
+        {
+            <div class="alert @alertClass">
+                @result
+            </div>
+        }
+
+        <!-- Manual Register Form -->
+        <div>
+            <EditForm Model="@registerModel" OnValidSubmit="HandleRegistration">
+                <DataAnnotationsValidator />
+
+                <!-- First Name with Icon -->
+                <ValidationMessage class="text-danger" For="@(() => registerModel.FirstName)" />
+                <div class="mb-3 input-group">
+                    <span class="input-group-text"><i class="bi bi-person"></i></span> <!-- Icon -->
+                    <InputText id="firstName" class="form-control" @bind-Value="registerModel.FirstName"
+                        placeholder="First Name" />
+                </div>
+
+                <!-- Last Name with Icon -->
+                <ValidationMessage class="text-danger" For="@(() => registerModel.LastName)" />
+                <div class="mb-3 input-group">
+                    <span class="input-group-text"><i class="bi bi-person-fill"></i></span> <!-- Icon -->
+                    <InputText id="lastName" class="form-control" @bind-Value="registerModel.LastName"
+                        placeholder="Last Name" />
+                </div>
+
+                <!-- Email with Icon -->
+                <ValidationMessage class="text-danger" For="@(() => registerModel.Email)" />
+                <div class="mb-3 input-group">
+                    <span class="input-group-text"><i class="bi bi-envelope"></i></span> <!-- Icon -->
+                    <InputText id="email" class="form-control" @bind-Value="registerModel.Email"
+                        placeholder="Email Address" />
+                </div>
+
+                <!-- Password with Toggle Visibility and Icon -->
+                <ValidationMessage class="text-danger" For="@(() => registerModel.Password)" />
+                <div class="mb-3 input-group">
+                    <span class="input-group-text"><i class="bi bi-lock-fill"></i></span> <!-- Icon -->
+                    <InputText id="password" type="@passwordType" class="form-control"
+                        @bind-Value="registerModel.Password" placeholder="Password" />
+                    <button type="button" class="input-group-text" @onclick="TogglePasswordVisibility">
+                        <i class="bi @eyeIconClass"></i>
+                    </button>
+                </div>
+
+                <!-- Confirm Password with Toggle Visibility and Icon -->
+                <ValidationMessage class="text-danger" For="@(() => registerModel.ConfirmPassword)" />
+                <div class="mb-3 input-group">
+                    <span class="input-group-text"><i class="bi bi-lock-fill"></i></span> <!-- Icon -->
+                    <InputText id="confirmPassword" type="@passwordType" class="form-control"
+                        @bind-Value="registerModel.ConfirmPassword" placeholder="Confirm Password" />
+                    <button type="button" class="input-group-text" @onclick="TogglePasswordVisibility">
+                        <i class="bi @eyeIconClass"></i>
+                    </button>
+                </div>
+
+                <!-- Last Name with Icon -->
+                <ValidationMessage class="text-danger" For="@(() => registerModel.InviteCode)" />
+                <div class="mb-3 input-group">
+                    <span class="input-group-text"><i class="bi bi-qr-code"></i></span> <!-- Icon -->
+                    <InputText id="inviteCode" class="form-control" @bind-Value="registerModel.InviteCode"
+                        placeholder="Invite code" />
+                </div>
+
+                <button type="submit" class="btn btn-success w-100">Register</button>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+<!-- Right Column: Register Prompt (green gradient background) -->
+<div class="col-lg-6 custom-green-gradient d-flex justify-content-center align-items-center rounded-end">
+    <div class="text-center py-5">
+        <h2>Hi There!</h2>
+        <p>We are excited to have you on board. Please fill in the form to register an account and access the
+            system.</p>
+        <br />
+        <p>Already have an account?</p>
+        <a class="btn btn-outline-light" href="/Account/Login">Sign In</a>
+    </div>
+</div>
+
+@code {
+    // Controls password visibility.
+    private bool isPasswordVisible = false;
+
+    // Password type for visibility toggle.
+    private string passwordType => isPasswordVisible ? "Text" : "Password";
+
+    // Password visibility icon.
+    private string eyeIconClass => isPasswordVisible ? "bi-eye" : "bi-eye-slash";
+
+    // API result properties.
+    private string result = string.Empty;
+    private string alertClass = string.Empty;
+
+    // Register Model
+    private RegisterModel registerModel = new RegisterModel();
+
+    // Handle form submission.
+    private async Task HandleRegistration()
+    {
+        try
+        {
+            var response = await Http.PostAsJsonAsync<RegisterModel>("/api/auth/register", registerModel);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadFromJsonAsync<ApiResponse<string>>();
+
+                if (errorContent != null && errorContent.Errors.Count() > 0)
+                {
+                    result = errorContent.Errors.FirstOrDefault() ?? string.Empty;
+                    alertClass = "alert-danger";
+                }
+            }
+            else
+            {
+                var successContent = await response.Content.ReadFromJsonAsync<ApiResponse<string>>();
+                if (successContent != null && successContent.Data != null)
+                    Navigation.NavigateTo($"/account/{successContent.Data}/confirm", true);
+                else
+                {
+                    // In case data is null still alert the user of successful registration.
+                    result = "Registration completed pending email confirmation. Please confirm email.";
+                    alertClass = "alert-success";
+                }
+            }
+        }
+        catch (HttpRequestException e)
+        {
+            alertClass = "alert-danger";
+            result = $"An unexpected error occured: {e.Message}";
+            Console.WriteLine(e.Message);
+        }
+    }
+
+    // Handle password visibility toggle.
+    private void TogglePasswordVisibility()
+    {
+        isPasswordVisible = !isPasswordVisible;
+    }
+
+    // Simulated social register methods
+    private void RegisterWithFacebook() { Console.WriteLine("Register with Facebook"); }
+    private void RegisterWithTwitter() { Console.WriteLine("Register with Twitter"); }
+    private void RegisterWithGoogle() { Console.WriteLine("Register with Google"); }
+    private void RegisterWithLinkedIn() { Console.WriteLine("Register with LinkedIn"); }
+}
