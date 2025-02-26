@@ -1,0 +1,59 @@
+@page "/account/{userId}/confirm/{token}"
+@using System.Web;
+@using AppShareOn.Application.Dtos
+@using AppShareOn.Application.Models
+@using System.ComponentModel.DataAnnotations
+@layout AccountLayout
+@inject HttpClient Http
+
+@if (displayErrorMessage)
+{
+    <div class="text-center py-5">
+    <h2>Oh nooo...</h2>
+    <i class="bi bi-wrench-adjustable-circle-fill h1"></i>
+    <div class="text-center py-5">@errorMessage</div>
+</div>
+}
+else
+{
+    <div class="text-center py-5">
+    <h2>Registration Successful!</h2>
+    <i class="bi bi-envelope-check h1"></i>
+    <p>Congratulations! Your email address is now verified. Please continue to login to your account.</p>
+    <a class="btn btn-outline-success" href="/Account/Login">Login</a>
+</div>
+}
+
+@code {
+    [Parameter]
+    public string UserId { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Token { get; set; } = string.Empty;
+
+    // UI fields
+    private bool displayErrorMessage = false;
+    private string errorMessage = "Something went wrong. Please login to request a new confirmation link or re-register.";
+
+    // Handle form submission
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var response = await Http.GetAsync($"/api/auth/users/{UserId}/confirm?token={HttpUtility.UrlEncode(Token)}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                displayErrorMessage = true;
+                var errorData = await response.Content.ReadFromJsonAsync<ApiResponse<object>>();
+                errorMessage = errorData?.Errors?.FirstOrDefault() ?? errorMessage;
+            }
+        }
+        catch (HttpRequestException e)
+        {
+            displayErrorMessage = true;
+            errorMessage = e.Message;
+            Console.WriteLine(e.Message);
+        }
+    }
+}
